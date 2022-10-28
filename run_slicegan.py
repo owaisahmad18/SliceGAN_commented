@@ -30,7 +30,7 @@ img_channels = 3
 # greyscale. nphase can be, 'tif2D', 'png', 'jpg', tif3D, 'array')
 data_type = 'tif3D'
 # Path to your data. One string for isotrpic, 3 for anisotropic
-data_path = ['Examples/NMC.tif']
+data_path = ['Examples/NMC.tif'] # shravan - give 3 paths for 3 scans
 
 ## Network Architectures
 # Training image size, no. channels and scale factor vs raw data
@@ -50,7 +50,7 @@ df, gf = [img_channels, 64, 128, 256, 512, 1], [
 dp, gp = [1, 1, 1, 1, 0], [2, 2, 2, 2, 3]
 
 ## Create Networks
-netD, netG = networks.slicegan_rc_nets(Project_path, Training, image_type, dk, ds, df,dp, gk ,gs, gf, gp)
+netD, netG = networks.slicegan_rc_nets(Project_path, Training, image_type, dk, ds, df,dp, gk ,gs, gf, gp) # shravan - retrurns neural networks for discriminator and generator
 
 # Train
 if Training:

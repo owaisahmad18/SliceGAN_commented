@@ -49,7 +49,7 @@ def batch(data,type,l, sf):
         ## Create a data store and add random samples from the full image
         x_max, y_max, z_max = img.shape[:]
         print('training image shape: ', img.shape)
-        vals = np.unique(img)
+        vals = np.unique(img)   # shravan - sorted unique elements of array img
         for dim in range(3):
             data = np.empty([32 * 900, len(vals), l, l])
             print('dataset ', dim)
@@ -59,7 +59,7 @@ def batch(data,type,l, sf):
                 z = np.random.randint(0, z_max - l)
                 # create one channel per phase for one hot encoding
                 lay = np.random.randint(img.shape[dim]-1)
-                for cnt,phs in enumerate(list(vals)):
+                for cnt,phs in enumerate(list(vals)):   # shravan - cnt is the loop counter and phs is the actual entry in vals
                     img1 = np.zeros([l,l])
                     if dim==0:
                         img1[img[lay, y:y + l, z:z + l] == phs] = 1
