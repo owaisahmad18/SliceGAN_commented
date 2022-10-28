@@ -15,10 +15,11 @@ def mkdr(proj,proj_dir,Training):
     :param proj_dir: project directory
     :param Training: whether new training run or testing image
     :return: full project path
-    """
+    """    
     pth = proj_dir + '/' + proj
     if Training:
         try:
+            os.mkdir(proj_dir)
             os.mkdir(pth)
             return pth + '/' + proj
         except FileExistsError:
