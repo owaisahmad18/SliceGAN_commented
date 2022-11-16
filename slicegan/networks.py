@@ -79,15 +79,15 @@ def slicegan_rc_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
 
 
     # Make nets
-    class Generator(nn.Module):
+    class Generator(nn.Module): # shravan - Generator (child) class inheriting nn.Module class (parent class)
         def __init__(self):
-            super(Generator, self).__init__()
+            super(Generator, self).__init__()   # shravan - super() function is used to give access to the methods and properties of parent class. It retuns an object that represents the parent class.
             self.convs = nn.ModuleList()
             self.bns = nn.ModuleList()
-            self.rcconv = nn.Conv3d(gf[-2],gf[-1],3,1,0)
-            for lay, (k,s,p) in enumerate(zip(gk,gs,gp)):
-                self.convs.append(nn.ConvTranspose3d(gf[lay], gf[lay+1], k, s, p, bias=False))
-                self.bns.append(nn.BatchNorm3d(gf[lay+1]))
+            self.rcconv = nn.Conv3d(gf[-2],gf[-1],3,1,0)    # shravan - Conv3d(num_of_channels_in_input,num_of_channels_in_output,kernel_size,stride,padding,...) Applies a 3D convolution over an input signal composed of several input planes.
+            for lay, (k,s,p) in enumerate(zip(gk,gs,gp)):   # shravan - number of layers is determined from the size of gk or gs or gp
+                self.convs.append(nn.ConvTranspose3d(gf[lay], gf[lay+1], k, s, p, bias=False))  # shravan - ConvTranspose3d(num_of_channels_in_input,num_of_channels_in_output,kernel_size,stride,padding,) Applies a 3D transposed convolution operator over an input image composed of several input planes.
+                self.bns.append(nn.BatchNorm3d(gf[lay+1]))  # shravan - normalization of the inputs batch-wise
                 # self.bns.append(nn.InstanceNorm3d(gf[lay+1]))
 
         def forward(self, x):

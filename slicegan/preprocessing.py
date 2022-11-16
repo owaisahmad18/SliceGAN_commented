@@ -5,7 +5,7 @@ import tifffile
 def batch(data,type,l, sf):
     """
     Generate a batch of images randomly sampled from a training microstructure
-    :param data: data path
+    :param data: data path -- array containing the paths to images
     :param type: data type
     :param l: image size
     :param sf: scale factor
@@ -14,33 +14,37 @@ def batch(data,type,l, sf):
     Testing = False
     if type in ['png', 'jpg', 'tif2D']:
         datasetxyz = []
-        for img in data:
+        for img in data:        # shravan -- data is the array containing the paths to images
             img = plt.imread(img) if type != 'tif2D' else tifffile.imread(img)
             if len(img.shape)>2:
-                img = img[:,:,0]
-            img = img[::sf,::sf]
+                img = img[:,:,0]    # shravan - gets the Red channel value for all the pixels in the image
+            img = img[::sf,::sf]    # shravan - image size becomes l/sf. if l=64 and sf=2, after scaling original image of size 64x64 pixels becomes 32x32 pixels
             x_max, y_max= img.shape[:]
-            phases = np.unique(img)
-            data = np.empty([32 * 900, len(phases), l, l])
-            for i in range(32 * 900):
-                x = np.random.randint(1, x_max - l-1)
-                y = np.random.randint(1, y_max - l-1)
+            phases = np.unique(img)  # shravan - img is the red channel value for all the pixels i.e. conversion of red color into gray scale. each unique value in this space represents a unique phase
+            data = np.empty([32 * 10, len(phases), l, l])  # creates a matrix of dimensions (32*10,len(phases),l,l) -- len(phases), l should be resonably small, otherwise memory issues happen. for the NMC data, there are three phases white, black and gray.
+            # shravan - (1) We are sampling 32*10 images (each with size lxl) from the input image
+            #           (2) The number of unique phases in the image are determined
+            #           (3) One-hot encoding takes one image (in this case a sampled image of size lxl) and assigns 1 to  pixels with the specific phase and zero to all the other pixels. This is repeated for all the phases
+            #           (4) So a single image in one-hot encoding becomes 'nPhases' number of images
+            for i in range(32 * 10):    # shravan - sample 32*10 images
+                x = np.random.randint(1, x_max - l-1)   # shravan - generate a random integer between 1 and x_max-l-1
+                y = np.random.randint(1, y_max - l-1)   # shravan - x,y here represent the random starting positions of the pixels of image with size lxl. Since the image to be sampled can't go beyond the input image boundary, (x,y) can only be between (1,x_max-l-1) and (1,y_max-l-1). if (x,y)=(x_max,y_max) then we can still sample an image of size lxl without going out of the input image
                 # create one channel per phase for one hot encoding
-                for cnt, phs in enumerate(phases):
-                    img1 = np.zeros([l, l])
-                    img1[img[x:x + l, y:y + l] == phs] = 1
-                    data[i, cnt, :, :] = img1
+                for cnt, phs in enumerate(phases):  # enumerate --> [(0,phases[0]),(1,phases[1]) .....] <--- one-hot encoding of the sampled image
+                    img1 = np.zeros([l, l]) # shravan - matrix of size[l,l]. elements can be accessed with img1[i,j]
+                    img1[img[x:x + l, y:y + l] == phs] = 1  # shravan - samples image --> img[x:x+l,y:y+l]. if any of the pixels in this image has phase value of phs, then it is assigned 1. else they are assigned zero. 
+                    data[i, cnt, :, :] = img1   # shravan -- <-- 'i'th sampled image, 'nPhases' images with each one represeting the one-hot encoded representation for each of the nPhases, l, l
 
             if Testing:
                 for j in range(7):
-                    plt.imshow(data[j, 0, :, :]+2*data[j, 1, :, :])
+                    plt.imshow(data[j, 0, :, :]+2*data[j, 1, :, :]) # shravan - for the first 8 sampled images, take first two phases and combine them with linear combination
                     plt.pause(0.3)
                     plt.show()
                     plt.clf()
                 plt.close()
-            data = torch.FloatTensor(data)
-            dataset = torch.utils.data.TensorDataset(data)
-            datasetxyz.append(dataset)
+            data = torch.FloatTensor(data)  # shravan - creates a torch tensor (multi-dimensional matrix) from numpy arrays or python lists -- here 32*10,len(phases),l,l size
+            dataset = torch.utils.data.TensorDataset(data)  # shravan - tensor 'data' is converted into some sort of pointer. i.e. dataset has the address of the object containing 'data'
+            datasetxyz.append(dataset)  # shravan - datasetxyz is the list containing the addresses of the data. 1st element for the first image data (one-hot encoded), 2nd element for second image data ... etc.
 
     elif type=='tif3D':
         datasetxyz=[]
