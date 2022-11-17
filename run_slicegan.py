@@ -8,7 +8,7 @@ to generate a synthetic image using a trained generator.
 from slicegan import model, networks, util
 import argparse
 # Define project name
-Project_name = 'NMC'
+Project_name = 'COMPOSITE2D'
 # Specify project folder.
 Project_dir = 'Trained_Generators'
 # Run with False to show an image during or after training
@@ -23,9 +23,9 @@ Project_path = util.mkdr(Project_name, Project_dir, Training)
 ## Data Processing
 # Define image  type (colour, grayscale, three-phase or two-phase.
 # n-phase materials must be segmented)
-image_type = 'colour'
+image_type = 'nphases'  # nphases for composite2d.png image
 # img_channels should be number of phases for nphase, 3 for colour, or 1 for grayscale
-img_channels = 256
+img_channels = 256  # 256 for composite2d.png image
 # define data type (for colour/grayscale images, must be 'colour' / '
 # greyscale. nphase can be, 'tif2D', 'png', 'jpg', tif3D, 'array')
 data_type = 'png'
@@ -44,14 +44,16 @@ dk, gk = [4]*laysd, [4]*lays                                    # kernal sizes [
 # gk[0]=8
 ds, gs = [2]*laysd, [2]*lays                                    # strides
 # gs[0] = 4
-df, gf = [img_channels, 64, 128, 256, 512, 1], [
+df, gf = [img_channels, 64, 128, 256, 512, 1], [    # These also determine the size of neurons in intermediate layers. see output from netG() and netD() below
     z_channels, 1024, 512, 128, 32, img_channels]  # filter sizes for hidden layers (df  for discrimination filters and gf for generator filters)
 
 dp, gp = [1, 1, 1, 1, 0], [2, 2, 2, 2, 3]   # padding for 5 layers of discriminator and generators (Table 1 in the paper)
 
 ## Create Networks
 netD, netG = networks.slicegan_rc_nets(Project_path, Training, image_type, dk, ds, df,dp, gk ,gs, gf, gp) # shravan - retrurns neural networks for discriminator and generator
+print('netD: ', netD())
 
+print('netG: ', netG())
 # Train
 if Training:
     model.train(Project_path, image_type, data_type, data_path, netD, netG, img_channels, img_size, z_channels, scale_factor)

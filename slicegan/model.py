@@ -109,9 +109,9 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf):
                 gradient_penalty = util.calc_gradient_penalty(netD, real_data, fake_data_perm[:batch_size],
                                                                       batch_size, l,
                                                                       device, Lambda, nc)
-                disc_cost = out_fake - out_real + gradient_penalty
-                disc_cost.backward()
-                optimizer.step()
+                disc_cost = out_fake - out_real + gradient_penalty  # shravan -- discriminator cost : out_fake = mean prob of classifying the fake data as real, out_real=mean prob of calssifying the real data as real
+                disc_cost.backward()                                # min of disc_cost is max of (out_real - out_fake). this happens when out_real is as high as possible (i.e. the prob of classifying the real data as real should be high) and out_fake is as low as possible (i.e. the prob of classifying the fake data as real should be small)
+                optimizer.step()                                    # if we label the data as: real_data --> 1 and fake_data --> 0, this can be interpreted as the 'probability of data being real' which is the output from discriminator
             #logs for plotting
             disc_real_log.append(out_real.item())
             disc_fake_log.append(out_fake.item())
@@ -131,14 +131,14 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf):
                         netD = netDs[0]
                     # permute and reshape to feed to disc
                     fake_data_perm = fake.permute(0, d1, 1, d2, d3).reshape(l * batch_size, nc, l, l)
-                    output = netD(fake_data_perm)
-                    errG -= output.mean()
-                    # Calculate gradients for G
+                    output = netD(fake_data_perm)   # output is the probability of data supplied is real
+                    errG -= output.mean()       # shravan - generator cost = -output from discriminator for the generated fake data; min of generator cost implies maximization of discriminator output mean. i.e. the mean 'probability of data being real' should be high. i.e. the generated sample should be close to real data. i.e. we are tricking the dicriminator.
+                    # Calculate gradients for G         
                 errG.backward()
                 optG.step()
 
             # Output training stats & show imgs
-            if i % 25 == 0:
+            if i % 1 == 0:
                 netG.eval()
                 with torch.no_grad():
                     torch.save(netG.state_dict(), pth + '_Gen.pt')

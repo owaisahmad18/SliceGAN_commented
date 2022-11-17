@@ -117,13 +117,14 @@ def post_proc(img,imtype):
     except:
         pass
     if imtype == 'colour':
+        print('img[0]:',img[0])
         return np.int_(255 * (np.swapaxes(img[0], 0, -1)))
     if imtype == 'grayscale':
         return 255*img[0][0]
     else:
         nphase = img.shape[1]
-        return 255*torch.argmax(img, 1)/(nphase-1)
-        
+        return 255*torch.argmax(img, 1)/(nphase-1)  # probabilistic interpretation i.e. phase with higher one-hot encoding is more likely to be present in this pixel. see sliceGAN paper.
+                                                    # argmax(img, 1) --> gives maximum along dimension 1 for each pixel in img 
 def test_plotter(img,slcs,imtype,pth):
     """
     creates a fig with 3*slc subplots showing example slices along the three axes
@@ -132,12 +133,17 @@ def test_plotter(img,slcs,imtype,pth):
     :param imtype: image type
     :param pth: where to save plot
     """
-    img = post_proc(img,imtype)[0]
-    fig, axs = plt.subplots(slcs, 3)
+    # img --> one-hot encoded representation of 3D cube (typically 1x256x64x64x64 size i.e. 64x64x64 cube with nphases (==256 here) for which one-hot encoding is done)
+    #print('img-before: ',img.shape) 
+    #print('img-before: ',img)
+    img = post_proc(img,imtype)[0]  # shravan - post-process the image <--- for a colour image type, swaps the 2nd and 4th index. i.e. the img becomes 64x64x64x256 size
+    #print('img-after: ',img.shape)
+    #print('img-after: ',img)
+    fig, axs = plt.subplots(slcs, 3)    # plots the graphs in 5 rows by 3 columns format if slcs=5. ax returns an array of axes
     if imtype == 'colour':
         for j in range(slcs):
-            axs[j, 0].imshow(img[j, :, :, :], vmin = 0, vmax = 255)
-            axs[j, 1].imshow(img[:, j, :, :],  vmin = 0, vmax = 255)
+            axs[j, 0].imshow(img[j, :, :, :], vmin = 0, vmax = 255) # shravan - [j,0]--> jth row and 0th column 
+            axs[j, 1].imshow(img[:, j, :, :],  vmin = 0, vmax = 255)    # imshow(data_of_the_image,cmap,vmin=colorbar_min_range,vmax=colorbar_max_range... etc.)
             axs[j, 2].imshow(img[:, :, j, :],  vmin = 0, vmax = 255)
     elif imtype == 'grayscale':
         for j in range(slcs):
