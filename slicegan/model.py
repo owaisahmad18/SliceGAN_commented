@@ -98,7 +98,7 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
                                                                       batch_size, l,
                                                                       device, Lambda, nc)
                 disc_cost = out_fake - out_real + gradient_penalty  # shravan -- discriminator cost : out_fake = mean prob of classifying the fake data as real, out_real=mean prob of calssifying the real data as real
-                disc_cost.backward()                                # min of disc_cost is max of (out_real - out_fake). this happens when out_real is as high as possible (i.e. the prob of classifying the real data as real should be high) and out_fake is as low as possible (i.e. the prob of classifying the fake data as real should be small)
+                disc_cost.backward()                                # minimization of disc_cost is max imization of (out_real - out_fake). this happens when out_real is as high as possible (i.e. the prob of classifying the real data as real should be high) and out_fake is as low as possible (i.e. the prob of classifying the fake data as real should be small)
                 optimizer.step()                                        # if we label the data as: real_data --> 1 and fake_data --> 0, this can be interpreted as the 'probability of data being real' which is the output from discriminator
                                                                               # However, in the Wasserstein loss, the output can have arbitrary number (not necessarily between 0 and 1), in this case, out_real must be as high as possible nd out_fake must be as small as possible (the interpretation is similar to the probabilistic interpretation given above). The dicriminator in this case is some times called 'critic' because it gives high value (happens when out_real >> out_fake) if the classification is correct and smaller value if the classification is bad (happens when out_fake~out_real). see Wasserstein loss definition.
             #logs for plotting
@@ -144,7 +144,7 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
                     ###save example slices
                     util.test_plotter(img, 5, imtype, pth)  # <--- plots the final slices
                     # plotting graphs
-                    util.graph_plot([disc_real_log, disc_fake_log], ['real (should be as high as possible)', 'fake (should be as low as possible)'], pth, 'LossGraph','Cumulative batch number','discriminator output')
-                    util.graph_plot([Wass_log], ['Wass Distance'], pth, 'WassGraph','Cumulative batch number','Wasserstein loss')
+                    util.graph_plot([disc_real_log, disc_fake_log], ['real as real (~prob. of classifying real image as real - should be as high as possible)', 'fake as real (~prob. of classifying fake image as real - should be as low as possible)'], pth, 'LossGraph','Cumulative batch number','discriminator output')
+                    util.graph_plot([Wass_log], ['Wass Distance'], pth, 'WassGraph','Cumulative batch number','Wasserstein loss (Disc out put for real as real - Disc output for fake as real)' )
                     util.graph_plot([gp_log], ['Gradient Penalty'], pth, 'GpGraph','Cumulative batch number','Gradient penalty')
                 netG.train()
