@@ -6,7 +6,7 @@ import torch.optim as optim
 import time
 import matplotlib
 
-def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf):
+def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBeforeUpdatingGenerator,nSamplesFromRealImages,ngpu,num_epochs,batch_size,D_batch_size,lrg,lrd,beta1,beta2,Lambda,lz,workers):
     """
     train the generator
     :param pth: path to save all files, imgs and data
@@ -28,26 +28,11 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf):
         isotropic = False
 
     print('Loading Dataset...')
-    dataset_xyz = preprocessing.batch(real_data, datatype, l, sf)   # shravan - dataset_xyz is the list containing the addresses of the data. 1st element for the first image data (one-hot encoded) - tensor of size (32*10,len(phases),l,l), 2nd element for second image data ... etc.
-
-    ## Constants for NNs
+    dataset_xyz = preprocessing.batch(real_data, datatype, l, sf,nSamplesFromRealImages)   # shravan - dataset_xyz is the list containing the addresses of the data. 1st element for the first image data (one-hot encoded) - tensor of size (32*10,len(phases),l,l), 2nd element for second image data ... etc.
+    
     matplotlib.use('Agg')
-    ngpu = 1
-    num_epochs = 2
-
-    # batch sizes
-    batch_size = 8  # shravan - how many samples per batch to load
-    D_batch_size = 8
-    # optimiser params for G and D
-    lrg = 0.0001    # <-- for generator
-    lrd = 0.0001    # <-- for discriminator
-    beta1 = 0.9     # <-- same betas are used for both generators and discriminators
-    beta2 = 0.99
-    Lambda = 10     # <-- parameter for gradient penalty
-    critic_iters = 5
-    cudnn.benchmark = True
-    workers = 0
-    lz = 4
+    critic_iters = nBatchesBeforeUpdatingGenerator  #5
+    cudnn.benchmark = True   
     ##Dataloaders for each orientation
     device = torch.device("cuda:0" if(torch.cuda.is_available() and ngpu > 0) else "cpu")
     print(device, " will be used.\n")
@@ -83,25 +68,28 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf):
     print("Starting Training Loop...")
     # For each epoch
     start = time.time()
-    for epoch in range(num_epochs): # shravan - loop over number of epochs
-        # sample data for each direction (shravan - loop over batches of data)
-        for i, (datax, datay, dataz) in enumerate(zip(dataloaderx, dataloadery, dataloaderz), 1):   # (1,(datax,datay,dataz)), (2,(datax,datay,dataz)), ..... datax,datay,dataz are tensor objects. 2nd argument in enumerate() is the starting index for the enumerate objects. i.e. instead of starting with 0, it starts with 1 here.
-            dataset = [datax, datay, dataz] # shravan - one-hot encoded representation of sampled images (lxl size) from the slices along x,y,z directions. Every time a batch of 8(batch_size) such samples are used. datax has 'batch_size' tensor objects each with 'len(phases)' number of images with each image having lxl size
+    for epoch in range(num_epochs): # shravan --------------------------------------------- loop over number of epochs
+        # sample data for each direction (shravan ---------------------------------------------- loop over batches of data)
+        for i, (datax, datay, dataz) in enumerate(zip(dataloaderx, dataloadery, dataloaderz), 1):   # (1,(datax,datay,dataz)), (2,(datax,datay,dataz)), ..... datax,datay,dataz are tensor objects. 2nd argument in enumerate() is the starting index for the enumerate objects. i.e. instead of starting with 0, it starts with 1 here. 1,2,3... etc. are the batch numbers.
+            dataset = [datax, datay, dataz] # shravan - size of sataset is nDimensionsX1Xbatch_sizeXnPhasesXimg_size(l)Ximg_size(l). These are one-hot encoded representation of sampled images (lxl size) from the slices along x,y,z directions. Every time a batch of 8(batch_size) such samples are used. datax has 'batch_size' tensor objects each with 'len(phases)' number of images with each image having lxl size
             ### Initialise
             ### Discriminator
             ## Generate fake image batch with G
-            noise = torch.randn(D_batch_size, nz, lz,lz,lz, device=device)  # nz is the number of z channels. random numbers from normal distribution with zero mean and std of 1. nz must be equal to len(phases)? 
-            fake_data = netG(noise).detach()    # netG(noise) returns a tensor object. detach() methods sets the required_grad=false and just returns the tensor object to fake_data
+            noise = torch.randn(D_batch_size, nz, lz,lz,lz, device=device)  # nz is the number of z channels. random numbers from normal distribution with zero mean and std of 1. nz is the number of phases used for the noise image for its one-hot encoding representation. nz does not have to be equal to len(phases). 
+            #print('netGoutput-shape: ',netG(noise).size())
+            fake_data = netG(noise).detach()    # netG(noise) returns a tensor object of size batch_sizeXnPhasesXimg-size(l)Ximg_size(l). detach() methods sets the required_grad=false and just returns the tensor object to fake_data
             # for each dim (d1, d2 and d3 are used as permutations to make 3D volume into a batch of 2D images)
+            # ---------------------------------------  loop over each dimension i.e. X,Y and Z
             for dim, (netD, optimizer, data, d1, d2, d3) in enumerate(
-                    zip(netDs, optDs, dataset, [2, 3, 4], [3, 2, 2], [4, 4, 3])):   # d1=(2,3,4), d2=(3,2,4), d3=(4,2,3)
+                    zip(netDs, optDs, dataset, [2, 3, 4], [3, 2, 2], [4, 4, 3])):   # d1=(2,3,4), d2=(3,2,4), d3=(4,2,3), the list 'data' has a size of 1Xbatch_sizeXnPhasesXimg_size(l)Ximg_size(l)
                 if isotropic:
                     netD = netDs[0]
                     optimizer = optDs[0]
                 netD.zero_grad()    # sets the discriminator gradient to zero.
                 ##train on real images
-                real_data = data[0].to(device)  # shravan -- <--- samples taken from the input images. .to() Performs Tensor dtype and/or device conversion
-                out_real = netD(real_data).view(-1).mean()  # view(-1) flattens the tensor coming from netD(real_data). for ex. a 2x3x4 tensor is flattended to tensor of size 24
+                real_data = data[0].to(device)  # shravan -- <--- samples taken from the input images. .to() Performs Tensor dtype and/or device conversion. data[0] has a size of batch_sizeXnPhasesXimg_size(l)Ximg_size(l)
+                #print('netD(real_data)-shape: ',netD(real_data).size())
+                out_real = netD(real_data).view(-1).mean()  # netD(real_data) has a size of [batch_size,1,1,1]. view(-1) flattens the tensor coming from netD(real_data). for ex. a 2x3x4 tensor is flattended to tensor of size 24
                 ## train on fake images
                 # perform permutation + reshape to turn volume into batch of 2D images to pass to D
                 fake_data_perm = fake_data.permute(0, d1, 1, d2, d3).reshape(l * D_batch_size, nc, l, l)
@@ -111,18 +99,22 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf):
                                                                       device, Lambda, nc)
                 disc_cost = out_fake - out_real + gradient_penalty  # shravan -- discriminator cost : out_fake = mean prob of classifying the fake data as real, out_real=mean prob of calssifying the real data as real
                 disc_cost.backward()                                # min of disc_cost is max of (out_real - out_fake). this happens when out_real is as high as possible (i.e. the prob of classifying the real data as real should be high) and out_fake is as low as possible (i.e. the prob of classifying the fake data as real should be small)
-                optimizer.step()                                    # if we label the data as: real_data --> 1 and fake_data --> 0, this can be interpreted as the 'probability of data being real' which is the output from discriminator
+                optimizer.step()                                        # if we label the data as: real_data --> 1 and fake_data --> 0, this can be interpreted as the 'probability of data being real' which is the output from discriminator
+                                                                              # However, in the Wasserstein loss, the output can have arbitrary number (not necessarily between 0 and 1), in this case, out_real must be as high as possible nd out_fake must be as small as possible (the interpretation is similar to the probabilistic interpretation given above). The dicriminator in this case is some times called 'critic' because it gives high value (happens when out_real >> out_fake) if the classification is correct and smaller value if the classification is bad (happens when out_fake~out_real). see Wasserstein loss definition.
             #logs for plotting
-            disc_real_log.append(out_real.item())
+            disc_real_log.append(out_real.item())       # item() returns the entry from tensor of rank 1 as a standard python number. out_real must be a tensor containing just 1 element
             disc_fake_log.append(out_fake.item())
             Wass_log.append(out_real.item() - out_fake.item())
             gp_log.append(gradient_penalty.item())
             ### Generator Training
+            isTrainedGeneratorThisBatch = False
             if i % int(critic_iters) == 0:
+                isTrainedGeneratorThisBatch = True
                 netG.zero_grad()
                 errG = 0
                 noise = torch.randn(batch_size, nz, lz,lz,lz, device=device)
                 fake = netG(noise)
+                #print('3D image: ',fake)
 
                 for dim, (netD, d1, d2, d3) in enumerate(
                         zip(netDs, [2, 3, 4], [3, 2, 2], [4, 4, 3])):
@@ -144,15 +136,15 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf):
                     torch.save(netG.state_dict(), pth + '_Gen.pt')
                     torch.save(netD.state_dict(), pth + '_Disc.pt')
                     noise = torch.randn(1, nz,lz,lz,lz, device=device)
-                    img = netG(noise)
+                    img = netG(noise)   # based on the optimized Generator so far, generate a new image
                     ###Print progress
                     ## calc ETA
-                    steps = len(dataloaderx)
-                    util.calc_eta(steps, time.time(), start, i, epoch, num_epochs)
+                    steps = len(dataloaderx)    # total number of batches
+                    util.calc_eta(steps, time.time(), start, i, epoch, num_epochs,isTrainedGeneratorThisBatch)  # i is the batch number, steps is the total number of batches, In each epoch, all batches are passed to neural network for training.
                     ###save example slices
                     util.test_plotter(img, 5, imtype, pth)  # <--- plots the final slices
                     # plotting graphs
-                    util.graph_plot([disc_real_log, disc_fake_log], ['real', 'perp'], pth, 'LossGraph')
-                    util.graph_plot([Wass_log], ['Wass Distance'], pth, 'WassGraph')
-                    util.graph_plot([gp_log], ['Gradient Penalty'], pth, 'GpGraph')
+                    util.graph_plot([disc_real_log, disc_fake_log], ['real (should be as high as possible)', 'fake (should be as low as possible)'], pth, 'LossGraph','Cumulative batch number','discriminator output')
+                    util.graph_plot([Wass_log], ['Wass Distance'], pth, 'WassGraph','Cumulative batch number','Wasserstein loss')
+                    util.graph_plot([gp_log], ['Gradient Penalty'], pth, 'GpGraph','Cumulative batch number','Gradient penalty')
                 netG.train()

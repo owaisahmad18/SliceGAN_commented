@@ -83,7 +83,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device, gp_
     return gradient_penalty
 
 
-def calc_eta(steps, time, start, i, epoch, num_epochs):
+def calc_eta(steps, time, start, i, epoch, num_epochs,isTrainedGeneratorThisBatch):
     """
     Estimates the time remaining based on the elapsed time and epochs
     :param steps:
@@ -94,14 +94,14 @@ def calc_eta(steps, time, start, i, epoch, num_epochs):
     :param num_epochs: totale no. of epochs
     """
     elap = time - start
-    progress = epoch * steps + i + 1
-    rem = num_epochs * steps - progress
-    ETA = rem / progress * elap
+    progress = epoch * steps + i    # total number of batches processed so far in all the epochs
+    rem = num_epochs * steps - progress # remaining number of batches to process = total number of batches in all the epochs - number of batches processed so far
+    ETA = rem / progress * elap   # linearly extrapolate to compute the time remaining (based on number of batches remaining) based on time elapsed (based on batches processed so far)
     hrs = int(ETA / 3600)
     mins = int((ETA / 3600 % 1) * 60)
-    print('[%d/%d][%d/%d]\tETA: %d hrs %d mins'
-          % (epoch, num_epochs, i, steps,
-             hrs, mins))
+    print('Epochs: %d/%d \t batchNumber: %d/%d \t Est. Time Remaining: %d hrs %d mins \t isTrainedGeneratorThisBatch: '
+          % (epoch+1, num_epochs, i, steps,
+             hrs, mins),isTrainedGeneratorThisBatch)
 
 ## Plotting Utils
 def post_proc(img,imtype):
@@ -158,7 +158,7 @@ def test_plotter(img,slcs,imtype,pth):
     plt.savefig(pth + '_slices.png')
     plt.close()
 
-def graph_plot(data,labels,pth,name):
+def graph_plot(data,labels,pth,name,xlabel,ylabel):
     """
     simple plotter for all the different graphs
     :param data: a list of data arrays
@@ -167,10 +167,13 @@ def graph_plot(data,labels,pth,name):
     :param name: name of the plot figure
     :return:
     """
-
+    
     for datum,lbl in zip(data,labels):
+        #print('datum: ',datum)
         plt.plot(datum, label = lbl)
     plt.legend()
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.savefig(pth + '_' + name)
     plt.close()
 

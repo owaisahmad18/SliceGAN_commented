@@ -114,7 +114,7 @@ def slicegan_rc_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
 
     return Discriminator, Generator
     
-
+# OUTPUT
 #netD:  Discriminator(
 #  (convs): ModuleList(
 #    (0): Conv2d(256, 64, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
