@@ -48,7 +48,7 @@ def slicegan_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
             super(Discriminator, self).__init__()
             self.convs = nn.ModuleList()
             for lay, (k, s, p) in enumerate(zip(dk, ds, dp)):
-                self.convs.append(nn.Conv2d(df[lay], df[lay + 1], k, s, p, bias=False))
+                self.convs.append(nn.Conv2d(df[lay], df[lay + 1], k, s, p, bias=False))     # df = [img_channels, 64, 128, 256, 512, 1]
 
         def forward(self, x):
             for conv in self.convs[:-1]:
@@ -87,7 +87,7 @@ def slicegan_rc_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
             self.rcconv = nn.Conv3d(gf[-2],gf[-1],3,1,0)    # shravan - Conv3d(num_of_channels_in_input,num_of_channels_in_output,kernel_size,stride,padding,...) Applies a 3D convolution over an input signal composed of several input planes.
             for lay, (k,s,p) in enumerate(zip(gk,gs,gp)):   # shravan - number of layers is determined from the size of gk or gs or gp
                 self.convs.append(nn.ConvTranspose3d(gf[lay], gf[lay+1], k, s, p, bias=False))  # shravan - ConvTranspose3d(num_of_channels_in_input,num_of_channels_in_output,kernel_size,stride,padding,) Applies a 3D transposed convolution operator over an input image composed of several input planes.
-                self.bns.append(nn.BatchNorm3d(gf[lay+1]))  # shravan - normalization of the inputs batch-wise
+                self.bns.append(nn.BatchNorm3d(gf[lay+1]))  # shravan - normalization of the inputs batch-wise. see https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose3d.html
                 # self.bns.append(nn.InstanceNorm3d(gf[lay+1]))
 
         def forward(self, x):
@@ -126,7 +126,7 @@ def slicegan_rc_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
 #)
 #netG:  Generator(
 #  (convs): ModuleList(
-#    (0): ConvTranspose3d(32, 1024, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(2, 2, 2), bias=False)
+#    (0): ConvTranspose3d(32, 1024, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(2, 2, 2), bias=False)     # see https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose3d.html
 #    (1): ConvTranspose3d(1024, 512, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(2, 2, 2), bias=False)
 #    (2): ConvTranspose3d(512, 128, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(2, 2, 2), bias=False)
 #    (3): ConvTranspose3d(128, 32, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(2, 2, 2), bias=False)
