@@ -24,8 +24,8 @@ def batch(data,type,l, sf,nSamplesFromRealImages):
             data = np.empty([nSamplesFromRealImages, len(phases), l, l])  # creates a matrix of dimensions (32*10,len(phases),l,l) -- len(phases), lt should be resonably small, otherwise memory issues happen. for the NMC data, there are three phases white, black and gray. Number of batches would be : (first argument here/batch size)
             # shravan - (1) We are sampling 32*10 images (each with size lxl) from the input image
             #           (2) The number of unique phases in the image are determined
-            #           (3) One-hot encoding takes one image (in this case a sampled image of size lxl) and assigns 1 to  pixels with the specific phase and zero to all the other pixels. This is repeated for all the phases
-            #           (4) So a single image in one-hot encoding becomes 'nPhases' number of images
+            #           (3) One-hot encoding takes one image (in this case a sampled image of size lxl) and assigns 'one' to  pixels with the specific phase and 'zero' to all the other pixels. This is repeated for all the phases
+            #           (4) So a single (l x l) image becomes 'nPhases' number of images in its one-hot encoding
             print('Estimated memory for the samples from real image(s): ',((nSamplesFromRealImages)*len(phases)*l*l)*8/1E9, 'GB')        # assuming 8bytes for a floating number
             for i in range(nSamplesFromRealImages):    # shravan - sample 32*10 images
                 x = np.random.randint(1, x_max - l-1)   # shravan - generate a random integer between 1 and x_max-l-1
