@@ -22,13 +22,13 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
     :return:
     """
     if len(real_data) == 1:     # shravan - if only one file path is specified
-        real_data *= 3  # shravan - if x = [1,2,5] then x *= 3 gives x = [1,2,5,1,2,5,1,2,5]. In other words, the path specified is copied for all three directions 
+        real_data *= 3  # shravan - if x = [1,2,5] then x *= 3 gives x = [1,2,5,1,2,5,1,2,5]=[x_orig x_orig x_orig]. In other words, the path specified is copied for all three directions 
         isotropic = True
     else:
         isotropic = False
 
     print('Loading Dataset...')
-    dataset_xyz = preprocessing.batch(real_data, datatype, l, sf,nSamplesFromRealImages)   # shravan - dataset_xyz is the list containing the addresses of the data. 1st element for the first image data (one-hot encoded) - tensor of size (32*10,len(phases),l,l), 2nd element for second image data ... etc.
+    dataset_xyz = preprocessing.batch(real_data, datatype, l, sf,nSamplesFromRealImages)   # shravan - dataset_xyz is the list containing the addresses of the data. 1st element for the first reference image data (one-hot encoded) - tensor of size (32*10,len(phases),l,l), 2nd element for second reference image data ... etc.
     
     matplotlib.use('Agg')
     critic_iters = nBatchesBeforeUpdatingGenerator  #5
@@ -38,7 +38,7 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
     print(device, " will be used.\n")
 
     # D trained using different data for x, y and z directions
-    dataloaderx = torch.utils.data.DataLoader(dataset_xyz[0], batch_size=batch_size,    # dataloaderx is the pointer to object that has a size of (32*10/batch_size). i.e. the data_xyz[0] (having a size of 32*900) is divided into batches of size 8 giving rise to (32*900/8)=3600 batches
+    dataloaderx = torch.utils.data.DataLoader(dataset_xyz[0], batch_size=batch_size,    # dataloaderx is the pointer to object that has a size of (32*10/batch_size). i.e. the data_xyz[0] (having a size of 32*10) is divided into batches of size 8 giving rise to (32*10/8)=40 batches
                                               shuffle=True, num_workers=workers)        # dataloaderx's first element contains a tensor object of size (batch_size,len(phases),l,l) and so on... up to (32*10/batch_size) elements
     dataloadery = torch.utils.data.DataLoader(dataset_xyz[1], batch_size=batch_size,
                                               shuffle=True, num_workers=workers)
@@ -144,7 +144,7 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
                     ###save example slices
                     util.test_plotter(img, 5, imtype, pth)  # <--- plots the final slices
                     # plotting graphs
-                    util.graph_plot([disc_real_log, disc_fake_log], ['real as real (~prob. of classifying real image as real - should be as high as possible)', 'fake as real (~prob. of classifying fake image as real - should be as low as possible)'], pth, 'LossGraph','Cumulative batch number','discriminator output')
-                    util.graph_plot([Wass_log], ['Wass Distance'], pth, 'WassGraph','Cumulative batch number','Wasserstein loss (Disc out put for real as real - Disc output for fake as real)' )
+                    util.graph_plot([disc_real_log, disc_fake_log], ['real as real \n(~Prob. of classifying real image as real - should be high)', 'fake as real \n(~Prob. of classifying fake image as real - should be low)'], pth, 'LossGraph','Cumulative batch number','discriminator output')
+                    util.graph_plot([Wass_log], ['Wass Distance'], pth, 'WassGraph','Cumulative batch number','\n Wasserstein loss \n(DiscOutputForRealAsReal - DiscOutputForFakeAsReal)' )
                     util.graph_plot([gp_log], ['Gradient Penalty'], pth, 'GpGraph','Cumulative batch number','Gradient penalty')
                 netG.train()
