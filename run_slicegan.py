@@ -30,7 +30,7 @@ img_channels = 256              # 256 for composite2d.png image
 # greyscale. nphase can be, 'tif2D', 'png', 'jpg', tif3D, 'array')
 data_type = 'png'
 # Path to your data. One string for isotrpic, 3 for anisotropic
-data_path = ['Examples/composite2D.png'] # shravan - give 3 paths for 3 scans
+data_path = ['Examples/compositeSmall2D.png'] # shravan - give 3 paths for 3 scans
 
 ## Network Architectures
 # Training image size, no. channels and scale factor vs raw data
@@ -45,7 +45,7 @@ dk, gk = [4]*laysd, [4]*lays                                    # kernal sizes [
 ds, gs = [2]*laysd, [2]*lays                                    # strides
 # gs[0] = 4
 df, gf = [img_channels, 64, 128, 256, 512, 1], [    # These also determine the size of neurons in intermediate layers. see output from netG() and netD() below
-    z_channels, 1024, 512, 128, 32, img_channels]  # filter sizes for hidden layers (df for discrimination filters and gf for generator filters)
+    z_channels, 1024, 512, 128, 32, img_channels]  # filter sizes for hidden layers (df for discrimination filters and gf for generator filters) --> generator finally outputs an image with same number of channels imag_channels as the reference image.
 
 dp, gp = [1, 1, 1, 1, 0], [2, 2, 2, 2, 3]   # padding for 5 layers of discriminator and generators (Table 1 in the paper)
 
