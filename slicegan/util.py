@@ -174,6 +174,7 @@ def graph_plot(data,labels,pth,name,xlabel,ylabel):
     plt.legend()
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
+    plt.subplots_adjust(left=0.15)
     plt.savefig(pth + '_' + name)
     plt.close()
 
