@@ -16,8 +16,8 @@ def batch(data,type,l, sf,nSamplesFromRealImages):
         datasetxyz = []
         for img in data:        # shravan -- data is the array containing the paths to images
             img = plt.imread(img) if type != 'tif2D' else tifffile.imread(img)
-            if len(img.shape)>2:
-                img = img[:,:,0]    # shravan - gets the Red channel value for all the pixels in the image
+            if len(img.shape)>2:    # img = [[[1,2,3],[34,56,78],..........256Values], [[],[],.......256Values]..................256values]
+                img = img[:,:,0]    # shravan - gets the Red channel value for all the pixels in the image. :,:,0 --> 256(rows),256(columns),0th entry (red pixel value) for the row and column
             img = img[::sf,::sf]    # shravan - image size becomes l/sf. if l=64 and sf=2, after scaling original image of size 64x64 pixels becomes 32x32 pixels
             x_max, y_max= img.shape[:]
             phases = np.unique(img)  # shravan - img is the red channel value for all the pixels i.e. conversion of red color into gray scale. each unique value in this space represents a unique phase

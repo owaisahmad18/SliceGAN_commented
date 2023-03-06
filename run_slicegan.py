@@ -8,7 +8,8 @@ to generate a synthetic image using a trained generator.
 from slicegan import model, networks, util
 import argparse
 # Define project name
-Project_name = 'COMPOSITE2D'
+#Project_name = 'COMPOSITE2D'
+Project_name = '256x256pixels_24bitRGB_composite'
 # Specify project folder.
 Project_dir = 'Trained_Generators'
 # Run with False to show an image during or after training
@@ -23,14 +24,19 @@ Project_path = util.mkdr(Project_name, Project_dir, Training)
 ## Data Processing
 # Define image  type (colour, grayscale, three-phase or two-phase.
 # n-phase materials must be segmented)
-image_type = 'nphases'  # nphases for composite2d.png image
+#image_type = 'nphases'  # nphases for composite2d.png image
+image_type = 'nphases' 
 # img_channels should be number of phases for nphase, 3 for colour, or 1 for grayscale
-img_channels = 256              # 256 for composite2d.png image
+# Even if an image is RGB image, img_channels is not equal to 3. It is the number of different values of Red colour.
+#img_channels = 256              # 256 for composite2d.png image
+img_channels = 214              
 # define data type (for colour/grayscale images, must be 'colour' / '
 # greyscale. nphase can be, 'tif2D', 'png', 'jpg', tif3D, 'array')
-data_type = 'png'
+data_type = 'tif2D'
 # Path to your data. One string for isotrpic, 3 for anisotropic
-data_path = ['Examples/compositeSmall2D.png'] # shravan - give 3 paths for 3 scans
+#data_path = ['Examples/compositeSmall2D.png'] # shravan - give 3 paths for 3 scans
+data_path = ['Examples/256x256pixels_24bitRGB_composite.tif']
+
 
 ## Network Architectures
 # Training image size, no. channels and scale factor vs raw data

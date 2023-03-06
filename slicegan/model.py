@@ -19,6 +19,7 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
     :param l: image size
     :param nz: latent vector size
     :param sf: scale factor for training data
+    :param lz: latent space size (size of white-noise image used as input to netG)
     :return:
     """
     if len(real_data) == 1:     # shravan - if only one file path is specified
@@ -77,23 +78,32 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
             ## Generate fake image batch with G
             noise = torch.randn(D_batch_size, nz, lz,lz,lz, device=device)  # nz is the number of z channels. random numbers from normal distribution with zero mean and std of 1. nz is the number of phases used for the noise image for its one-hot encoding representation. nz does not have to be equal to len(phases). 
             #print('netGoutput-shape: ',netG(noise).size())
-            fake_data = netG(noise).detach()    # netG(noise) returns a tensor object of size batch_sizeXnPhasesXimg-size(l)Ximg_size(l). detach() methods sets the required_grad=false and just returns the tensor object to fake_data
-            # for each dim (d1, d2 and d3 are used as permutations to make 3D volume into a batch of 2D images)
+            fake_data = netG(noise).detach()    # netG(noise) returns a tensor object of size batch_sizeXnPhasesXimg_size(l)Ximg_size(l)Ximg_size(l). detach() methods sets the required_grad=false and just returns the tensor object to fake_data
+                                                # i.e. netG() generates batch_size number of 3D-volumes in their one-hot encoded representation.
             # ---------------------------------------  loop over each dimension i.e. X,Y and Z
-            for dim, (netD, optimizer, data, d1, d2, d3) in enumerate(
-                    zip(netDs, optDs, dataset, [2, 3, 4], [3, 2, 2], [4, 4, 3])):   # d1=(2,3,4), d2=(3,2,4), d3=(4,2,3), the list 'data' has a size of 1Xbatch_sizeXnPhasesXimg_size(l)Ximg_size(l)
-                if isotropic:
-                    netD = netDs[0]
-                    optimizer = optDs[0]
+            for dim, (netD, optimizer, data, d1, d2, d3) in enumerate(              # if A=[11,56,78], then enumerate(A) gives 0-->11, 1-->56, 2-->78 etc.
+                    zip(netDs, optDs, dataset, [2, 3, 4], [3, 2, 2], [4, 4, 3])):   # The list 'data' has real-image-data and has a size of 1Xbatch_sizeXnPhasesXimg_size(l)Ximg_size(l)
+                if isotropic:                                           # dim=0 --> netD=netDs[0],optimizer=optDs[0],data=dataset[0],d1=2,d2=3,d3=4
+                    netD = netDs[0]                                     # dim=1 --> netD=netDs[1],optimizer=optDs[1],data=dataset[1],d1=3,d2=2,d3=4
+                    optimizer = optDs[0]                                # dim=2 --> netD=netDs[2],optimizer=optDs[2],data=dataset[2],d1=4,d2=2,d3=3
                 netD.zero_grad()    # sets the discriminator gradient to zero.
                 ##train on real images
+                # data[0] has a size of batch_sizeXnPhasesXimg_size(l)Ximg_size(l)
+                # i.e. sample batch_size number of images (their one-hot-encoded representation) of size img_size(l)Ximg_size(l) from the input image for comparison with fake images (of same size) later
                 real_data = data[0].to(device)  # shravan -- <--- samples taken from the input images. .to() Performs Tensor dtype and/or device conversion. data[0] has a size of batch_sizeXnPhasesXimg_size(l)Ximg_size(l)
-                #print('netD(real_data)-shape: ',netD(real_data).size())
+                # netD(real_data) has a size of batch_sizeX1X1X1
                 out_real = netD(real_data).view(-1).mean()  # netD(real_data) has a size of [batch_size,1,1,1]. view(-1) flattens the tensor coming from netD(real_data). for ex. a 2x3x4 tensor is flattended to tensor of size 24
                 ## train on fake images
-                # perform permutation + reshape to turn volume into batch of 2D images to pass to D
-                fake_data_perm = fake_data.permute(0, d1, 1, d2, d3).reshape(l * D_batch_size, nc, l, l)
-                out_fake = netD(fake_data_perm).mean()
+                # perform permutation + reshape to turn volume into batch of 2D images to pass to D                
+                # For:: dim=0, permute the indices (0,1,2,3,4) of fake_data to (0,2,1,3,4). i.e. the 
+                # size batch_sizeXnPhasesXimg_size(l)Ximg_size(l)Ximg_size(l) becomes batch_sizeXimg_size(1)Xn_phasesXimg_size(l)Ximg_size(l)
+                # for ex: batch_size=4, nPhase=nc=256, img_size=l=64, i.e. size 4X256X64X64X64 becomes 4X64X256X64X64
+                # which is reshaped to (64*4,256,64,64) --> one hot-ended represented images (256 phases) of 64 slices (of 4 batches -->64*4) along X-direction each having a size of 64X64 (Y and Z dimension pixels)
+                fake_data_perm = fake_data.permute(0, d1, 1, d2, d3).reshape(l * D_batch_size, nc, l, l) # nc = no of channels in the input image, 
+                # therefore, netD for this dimension is supplied with 256 images i.e. 64 images along this direction for 4 batches
+                out_fake = netD(fake_data_perm).mean()  # netD(fake_data_perm) has a size of img_size(l)*batch_sizeX1X1X1. These are the 64 pixel values for the 4 batches of data.
+                                                        # If the mean of the pixel values for the four batches is low, then it is a fake image.
+
                 gradient_penalty = util.calc_gradient_penalty(netD, real_data, fake_data_perm[:batch_size],
                                                                       batch_size, l,
                                                                       device, Lambda, nc)
@@ -136,13 +146,14 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
                     torch.save(netG.state_dict(), pth + '_Gen.pt')
                     torch.save(netD.state_dict(), pth + '_Disc.pt')
                     noise = torch.randn(1, nz,lz,lz,lz, device=device)
-                    img = netG(noise)   # based on the optimized Generator so far, generate a new image
+                    img = netG(noise)   # based on the optimized Generator so far, generate a new image. img has a size of batch_sizeXnPhasesXimg_size(l)Ximg_size(l)Ximg_size(l)
                     ###Print progress
                     ## calc ETA
                     steps = len(dataloaderx)    # total number of batches
                     util.calc_eta(steps, time.time(), start, i, epoch, num_epochs,isTrainedGeneratorThisBatch)  # i is the batch number, steps is the total number of batches, In each epoch, all batches are passed to neural network for training.
                     ###save example slices
-                    util.test_plotter(img, 5, imtype, pth)  # <--- plots the final slices
+                    # img is a 3D volume consisting of batch_size number of images in their on-hot-encoded representation.
+                    util.test_plotter(img, 5, imtype, pth)  # <--- plots the final slices. imtype can be one of colour, grayscale, three-phase or two-phase or nphases.
                     # plotting graphs
                     util.graph_plot([disc_real_log, disc_fake_log], ['real as real \n(~Prob. of classifying real image as real - should be high)', 'fake as real \n(~Prob. of classifying fake image as real - should be low)'], pth, 'LossGraph','Cumulative batch number','discriminator output')
                     util.graph_plot([Wass_log], ['Wass Distance'], pth, 'WassGraph','Cumulative batch number','\n Wasserstein loss \n(DiscOutputForRealAsReal - DiscOutputForFakeAsReal)' )
