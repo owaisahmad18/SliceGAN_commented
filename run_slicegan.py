@@ -9,7 +9,7 @@ from slicegan import model, networks, util
 import argparse
 # Define project name
 #Project_name = 'COMPOSITE2D'
-Project_name = '256x256pixels_24bitRGB_composite'
+Project_name = 'compositeSmall2D'
 # Specify project folder.
 Project_dir = 'Trained_Generators'
 # Run with False to show an image during or after training
@@ -28,14 +28,14 @@ Project_path = util.mkdr(Project_name, Project_dir, Training)
 image_type = 'nphases' 
 # img_channels should be number of phases for nphase, 3 for colour, or 1 for grayscale
 # Even if an image is RGB image, img_channels is not equal to 3. It is the number of different values of Red colour.
-#img_channels = 256              # 256 for composite2d.png image
-img_channels = 214              
+img_channels = 256              # 256 for composite2d.png image
+#img_channels = 214              
 # define data type (for colour/grayscale images, must be 'colour' / '
 # greyscale. nphase can be, 'tif2D', 'png', 'jpg', tif3D, 'array')
-data_type = 'tif2D'
+data_type = 'png'
 # Path to your data. One string for isotrpic, 3 for anisotropic
 #data_path = ['Examples/compositeSmall2D.png'] # shravan - give 3 paths for 3 scans
-data_path = ['Examples/256x256pixels_24bitRGB_composite.tif']
+data_path = ['Examples/compositeSmall2D.png']
 
 
 ## Network Architectures
@@ -56,7 +56,7 @@ df, gf = [img_channels, 64, 128, 256, 512, 1], [    # These also determine the s
 dp, gp = [1, 1, 1, 1, 0], [2, 2, 2, 2, 3]   # padding for 5 layers of discriminator and generators (Table 1 in the paper)
 
 # other settings
-nBatchesBeforeUpdatingGenerator = 4
+nBatchesBeforeUpdatingGenerator = 8
 nSamplesFromRealImages = 32*6  # multiple of 32
 ngpu = 1
 num_epochs = 60

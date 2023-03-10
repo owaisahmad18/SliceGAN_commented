@@ -124,7 +124,7 @@ def post_proc(img,imtype):
     else:
         nphase = img.shape[1]
         print('nphase:',nphase)
-        f = open("pixelValues.out", "w")
+        #f = open("pixelValues.out", "w")
         #for jj in range(0,64):
         #    for kk in range(0,64): 
         #        for ll in range(0,64): 
@@ -132,13 +132,14 @@ def post_proc(img,imtype):
         #            for ii in range(0,nphase):
         #                #f.write('%5s %5d %5s %5d %5s %5d %5s %5d %7s %5d \n' % ('ii=', ii,'jj=',jj,'kk=',kk,'ll=',ll, ' pixel=',img[0][ii][jj][kk][ll]))
         #                maxValueForThisPixel = max(maxValueForThisPixel,img[0][ii][jj][kk][ll])
-        #            f.write('%5d %5d %5d %2s %10.6f\n' % (ii,jj,kk,' ',maxValueForThisPixel))    
-                        
-        f.close()
-        print(torch.argmax(img, 1)[0][1][1][1])
-        return
+        #            f.write('%5d %5d %5d %2s %10.6f\n' % (ii,jj,kk,' ',maxValueForThisPixel))                            
+        #f.close()
+        #print(torch.argmax(img, 1)[0][1][1][1])
+        #return
+        
         return 255*torch.argmax(img, 1)/(nphase-1)  # probabilistic interpretation i.e. phase with higher one-hot encoding is more likely to be present in this pixel. see sliceGAN paper.
                                                     # argmax(img, 1) --> gives index of maximum value along dimension 1 for each pixel in img. dimension 1 represents the one-hot-encoded representation of the image.
+                                                    # take each of the voxel and go to its one-hot encoded representation (i.e. nphase number of values) and pick the maximum of these. After that, scale it to a gray-scale color map by multiplying with (256-1)/(nphase-1)
 def test_plotter(img,slcs,imtype,pth):
     """
     creates a fig with 3*slc subplots showing example slices along the three axes
@@ -148,7 +149,6 @@ def test_plotter(img,slcs,imtype,pth):
     :param pth: where to save plot
     """
     # img --> one-hot encoded representation of 3D cube (typically 1x256x64x64x64 size i.e. 64x64x64 cube with nphases (==256 here) for which one-hot encoding is done)
-    #print('img-before: ',img.shape) 
     #print('img-before: ',img)
     #print('shape:',post_proc(img,imtype).shape)
     #print('post_proc shape:',post_proc(img,imtype))
@@ -172,7 +172,7 @@ def test_plotter(img,slcs,imtype,pth):
             axs[j, 2].imshow(img[:, :, j], cmap = 'gray')
     else:
         for j in range(slcs):
-            axs[j, 0].imshow(img[j, :, :])
+            axs[j, 0].imshow(img[j, :, :])  # shravan - by default, the 'viridis' color map is used
             axs[j, 1].imshow(img[:, j, :])
             axs[j, 2].imshow(img[:, :, j])
     plt.savefig(pth + '_slices.png')

@@ -70,12 +70,12 @@ def slicegan_rc_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
     if Training:
         with open(pth + '_params.data', 'wb') as filehandle:
             # store the data as binary data stream
-            pickle.dump(params, filehandle)
+            pickle.dump(params, filehandle)     # shravan - write the layer input and output channels and the kernerl sizes, strides, padding etc. to the parameter file (used when reading this file during generating new images based on training) 
     # if loading model, load the associated params file
     else:
         with open(pth + '_params.data', 'rb') as filehandle:
             # read the data as binary data stream
-            dk, ds, df, dp, gk, gs, gf, gp  = pickle.load(filehandle)
+            dk, ds, df, dp, gk, gs, gf, gp  = pickle.load(filehandle)   # shravan - reads the neural network information written as above while generating a new image after the training
 
 
     # Make nets
