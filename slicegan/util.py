@@ -123,20 +123,6 @@ def post_proc(img,imtype):
         return 255*img[0][0]
     else:
         nphase = img.shape[1]
-        print('nphase:',nphase)
-        #f = open("pixelValues.out", "w")
-        #for jj in range(0,64):
-        #    for kk in range(0,64): 
-        #        for ll in range(0,64): 
-        #            maxValueForThisPixel = 0
-        #            for ii in range(0,nphase):
-        #                #f.write('%5s %5d %5s %5d %5s %5d %5s %5d %7s %5d \n' % ('ii=', ii,'jj=',jj,'kk=',kk,'ll=',ll, ' pixel=',img[0][ii][jj][kk][ll]))
-        #                maxValueForThisPixel = max(maxValueForThisPixel,img[0][ii][jj][kk][ll])
-        #            f.write('%5d %5d %5d %2s %10.6f\n' % (ii,jj,kk,' ',maxValueForThisPixel))                            
-        #f.close()
-        #print(torch.argmax(img, 1)[0][1][1][1])
-        #return
-        
         return 255*torch.argmax(img, 1)/(nphase-1)  # probabilistic interpretation i.e. phase with higher one-hot encoding is more likely to be present in this pixel. see sliceGAN paper.
                                                     # argmax(img, 1) --> gives index of maximum value along dimension 1 for each pixel in img. dimension 1 represents the one-hot-encoded representation of the image.
                                                     # take each of the voxel and go to its one-hot encoded representation (i.e. nphase number of values) and pick the maximum of these. After that, scale it to a gray-scale color map by multiplying with (256-1)/(nphase-1)
@@ -149,16 +135,10 @@ def test_plotter(img,slcs,imtype,pth):
     :param pth: where to save plot
     """
     # img --> one-hot encoded representation of 3D cube (typically 1x256x64x64x64 size i.e. 64x64x64 cube with nphases (==256 here) for which one-hot encoding is done)
-    #print('img-before: ',img)
-    #print('shape:',post_proc(img,imtype).shape)
-    #print('post_proc shape:',post_proc(img,imtype))
     # At this stage, an n-phase image has a size of 1XnPhasesXimg_size(l)Ximg_size(l)Ximg_size(l) i.e. post_proc(img,imtype) has this size
     # post_proc --> turns on-hot-encoding to gray-scale image
     img = post_proc(img,imtype)[0]  # shravan - post-process the image <--- for a colour image type, swaps the 2nd and 4th index. i.e. the img becomes 64x64x64x256 size
-    # at this stage, the img becomes img_size(l)Ximg_size(l)Ximg_size(l) size
-    #print('img-after: ',img.shape)
-    #print('img-after: ',img)
-    #return
+    # shravan - at this stage, the img becomes img_size(l)Ximg_size(l)Ximg_size(l) size
     fig, axs = plt.subplots(slcs, 3)    # plots the graphs in 5 rows by 3 columns format if slcs=5. ax returns an array of axes
     if imtype == 'colour':
         for j in range(slcs):
@@ -213,28 +193,59 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
     """
     netG.load_state_dict(torch.load(pth + '_Gen.pt'))
     netG.eval()
-    netG.cuda()
-    noise = torch.randn(1, nz, lf, lf, lf).cuda()
+    #netG.cuda()
+    #noise = torch.randn(1, nz, lf, lf, lf).cuda()
+    noise = torch.randn(1, nz, lf, lf, lf)
     if periodic:
-        if periodic[0]:
+        if periodic[0]: # shravan - for periodicity along X-direction
             noise[:, :, :2] = noise[:, :, -2:]
-        if periodic[1]:
+        if periodic[1]: # shravan - for periodicity along Y-direction
             noise[:, :, :, :2] = noise[:, :, :, -2:]
-        if periodic[2]:
+        if periodic[2]: # shravan - for periodicity along Z-direction
             noise[:, :, :, :, :2] = noise[:, :, :, :, -2:]
-    with torch.no_grad():
-        raw = netG(noise)
+    with torch.no_grad():   # shravan - since we are evaluating the model, computation of gradients is not needed, so we turn them off here and just create a raw image from noise using the netG model. It also does: (1) normalisation layers use running statistics (2) de-activates Dropout layers
+        raw = netG(noise)   
     print('Postprocessing')
-    gb = post_proc(raw,imtype)[0]
+    gb = post_proc(raw,imtype)[0]   # raw has a size of 1X256X192X192X192. post_proc(raw,imtype) has a size of 1X192X192X192 after maxing out the one-hot encoded representation. gb has a size of 192X192X192
     if periodic:
         if periodic[0]:
             gb = gb[:-1]
         if periodic[1]:
             gb = gb[:,:-1]
         if periodic[2]:
-            gb = gb[:,:,:-1]
+            gb = gb[:,:,:-1]  
     tif = np.int_(gb)
-    tifffile.imwrite(pth + '.tif', tif)
+    tifffile.imwrite(pth + '_prediction.tif', tif)  # blank images are displayed. could be because of the edgecolor being black
+    
+    # shravan - plot 3d voxel data
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')    
+    cmap = plt.get_cmap("viridis")
+    norm = plt.Normalize(tif.min(), tif.max())
+    ax.voxels(np.ones_like(tif), facecolors=cmap(norm(tif)))
+    plt.savefig(pth + '_prediction_voxels.png')
+    #plt.show()
+    
+    # shravan - save 5 slices along each direction
+    slcs = 5
+    fig, axs = plt.subplots(slcs, 3)    # plots the graphs in 5 rows by 3 columns format if slcs=5. ax returns an array of axes
+    if imtype == 'colour':
+        for j in range(slcs):
+            axs[j, 0].imshow(gb[j, :, :, :], vmin = 0, vmax = 255) # shravan - [j,0]--> jth row and 0th column 
+            axs[j, 1].imshow(gb[:, j, :, :],  vmin = 0, vmax = 255)    # imshow(data_of_the_image,cmap,vmin=colorbar_min_range,vmax=colorbar_max_range... etc.)
+            axs[j, 2].imshow(gb[:, :, j, :],  vmin = 0, vmax = 255)
+    elif imtype == 'grayscale':
+        for j in range(slcs):
+            axs[j, 0].imshow(gb[j, :, :], cmap = 'gray')
+            axs[j, 1].imshow(gb[:, j, :], cmap = 'gray')
+            axs[j, 2].imshow(gb[:, :, j], cmap = 'gray')
+    else:
+        for j in range(slcs):
+            axs[j, 0].imshow(gb[j, :, :])  # shravan - by default, the 'viridis' color map is used
+            axs[j, 1].imshow(gb[:, j, :])
+            axs[j, 2].imshow(gb[:, :, j])
+    plt.savefig(pth + '_prediction_slices.png')
+    plt.close()
 
     return tif, raw, netG
 
