@@ -37,7 +37,7 @@ data_type = 'png'
 #data_path = ['Examples/compositeSmall2D.png'] # shravan - give 3 paths for 3 scans
 data_path = ['Examples/compositeSmall2D.png']
 
-
+generatePeriodicPrediction = [0, 0, 0]    # shravan - flags to generate periodic microstructures along X, Y and Z directions during the prediction stage
 ## Network Architectures
 # Training image size, no. channels and scale factor vs raw data
 img_size, scale_factor = 64,  1  # shravan - img_size is not the size of the input image (input image size is automatically determined by the code). It is the size of the sampled images in a slice (for ex. along X-dimension)
@@ -81,6 +81,6 @@ print('netG: ', netG())
 if Training:
     model.train(Project_path, image_type, data_type, data_path, netD, netG, img_channels, img_size, z_channels, scale_factor,nBatchesBeforeUpdatingGenerator,nSamplesFromRealImages,ngpu,num_epochs,batch_size,D_batch_size,learningRateGenerator,learningRateDiscriminator,beta1,beta2,Lambda,latentSpaceSize,nWorkers)
 else:
-    img, raw, netG = util.test_img(Project_path, image_type, netG(), z_channels, lf=8, periodic=[0, 1, 1])
+    img, raw, netG = util.test_img(Project_path, image_type, netG(), z_channels, lf=8, periodic=generatePeriodicPrediction)
     
 print('The program successfully finished')
