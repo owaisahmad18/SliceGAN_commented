@@ -191,6 +191,7 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
     :param periodic: list of periodicity in axis 1 through n
     :return:
     """
+    colormap_display = "viridis"    # colormap for the prediction microstructure. "viridis", "greys", "gray", "binary", "jet", "hsv" etc. similarly, "viridis_r" for reversing the color schemes. see https://matplotlib.org/stable/gallery/color/colormap_reference.html
     netG.load_state_dict(torch.load(pth + '_Gen.pt'))
     netG.eval()
     #netG.cuda()
@@ -220,7 +221,7 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
     # shravan - plot 3d voxel data
     fig = plt.figure()
     ax = fig.gca(projection='3d')    
-    cmap = plt.get_cmap("viridis")
+    cmap = plt.get_cmap(colormap_display)
     norm = plt.Normalize(tif.min(), tif.max())
     ax.voxels(np.ones_like(tif), facecolors=cmap(norm(tif)))
     plt.savefig(pth + '_prediction_voxels.png')
@@ -241,9 +242,9 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
             axs[j, 2].imshow(gb[:, :, j], cmap = 'gray')
     else:
         for j in range(slcs):
-            axs[j, 0].imshow(gb[j, :, :])  # shravan - by default, the 'viridis' color map is used
-            axs[j, 1].imshow(gb[:, j, :])
-            axs[j, 2].imshow(gb[:, :, j])
+            axs[j, 0].imshow(gb[j, :, :], cmap = colormap_display)  # shravan - by default, the 'viridis' color map is used
+            axs[j, 1].imshow(gb[:, j, :], cmap = colormap_display)
+            axs[j, 2].imshow(gb[:, :, j], cmap = colormap_display)
     plt.savefig(pth + '_prediction_slices.png')
     plt.close()
 
