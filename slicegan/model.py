@@ -134,8 +134,8 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
                         netD = netDs[0]
                     # permute and reshape to feed to disc
                     fake_data_perm = fake.permute(0, d1, 1, d2, d3).reshape(l * batch_size, nc, l, l)
-                    output = netD(fake_data_perm)   # output is the probability of data supplied is real
-                    errG -= output.mean()       # shravan - generator cost = -output from discriminator for the generated fake data; min of generator cost implies maximization of discriminator output mean. i.e. the mean 'probability of data being real' should be high. i.e. the generated sample should be close to real data. i.e. we are tricking the dicriminator.                    
+                    output = netD(fake_data_perm)   # output is the probability of classifying the fake image as real
+                    errG -= output.mean()       # shravan - generator cost = -output from discriminator for the generated fake data; min of generator cost implies maximization of discriminator output mean. i.e. the mean 'probability of fake image being real' should be high. i.e. the generated sample should be close to real data. i.e. we are tricking the dicriminator.                    
                     # Calculate gradients for G         
                 errG.backward() # errG has the error from all the 3 dimensions, i.e. errG = errG - output.mean() is performed over the output of three discriminators
                 optG.step()
