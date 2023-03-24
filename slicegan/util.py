@@ -220,7 +220,8 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
     
     # shravan - plot 3d voxel data
     fig = plt.figure()
-    ax = fig.gca(projection='3d')    
+    #ax = fig.gca(projection='3d')   # This way is deprecated after matplotlib 3.4
+    ax = plt.subplot(projection='3d')
     cmap = plt.get_cmap(colormap_display)
     norm = plt.Normalize(tif.min(), tif.max())
     ax.voxels(np.ones_like(tif), facecolors=cmap(norm(tif)))
