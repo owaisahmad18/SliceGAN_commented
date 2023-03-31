@@ -219,7 +219,15 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
             gb = gb[:,:-1]
         if periodic[2]:
             gb = gb[:,:,:-1]  
-    tif = np.int_(gb)
+    tif = np.int_(gb)       # tif has a shape of 192X192X192 for example.
+    np.save(pth + '-imageOutput.npy',tif, allow_pickle=False, fix_imports=True)    # write the image data in .npy binary format for easy retrieval later
+    # write the image data in text file for human reading
+    with open(pth + '-imageOutput.dat', 'w') as outfile:         # X = numpy.loadtxt('test.txt').reshape((4,5,10)) will read the data from the beloe written file into the array X having the same shape as tif
+        outfile.write('# Array shape: {0}\n'.format(tif.shape))    # writing a header here just for the sake of readability. Any line starting with "#" will be ignored by numpy.loadtxt    
+        for data_slice in tif: # Iterating through a ndimensional array produces slices along the last axis. This is equivalent to data[i,:,:] in this case
+            np.savetxt(outfile, data_slice, fmt='%3d', delimiter=' ')
+            outfile.write('# New slice\n')  # Writing out a break to indicate different slices...
+    
     start_2 = time.time()
     tifffile.imwrite(pth + '_prediction.tif', tif)  # blank images are displayed. could be because of the edgecolor being black
     end_2 = time.time()
