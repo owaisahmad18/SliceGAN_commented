@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tifffile
 import sys
+import time
 ## Training Utils
 
 def mkdr(proj,proj_dir,Training):
@@ -204,8 +205,11 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
             noise[:, :, :, :2] = noise[:, :, :, -2:]
         if periodic[2]: # shravan - for periodicity along Z-direction
             noise[:, :, :, :, :2] = noise[:, :, :, :, -2:]
+    start_1 = time.time()        
     with torch.no_grad():   # shravan - since we are evaluating the model, computation of gradients is not needed, so we turn them off here and just create a raw image from noise using the netG model. It also does: (1) normalisation layers use running statistics (2) de-activates Dropout layers
         raw = netG(noise)   
+    end_1 = time.time()
+    print('Time for generaor evaluation (s): ',end_1 - start_1)
     print('Postprocessing')
     gb = post_proc(raw,imtype)[0]   # raw has a size of 1X256X192X192X192. post_proc(raw,imtype) has a size of 1X192X192X192 after maxing out the one-hot encoded representation. gb has a size of 192X192X192
     if periodic:
@@ -216,8 +220,11 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
         if periodic[2]:
             gb = gb[:,:,:-1]  
     tif = np.int_(gb)
+    start_2 = time.time()
     tifffile.imwrite(pth + '_prediction.tif', tif)  # blank images are displayed. could be because of the edgecolor being black
-    
+    end_2 = time.time()
+    print('Time to write tiff file (s): ', end_2 - start_2)
+    start_3 = time.time()
     # shravan - plot 3d voxel data
     fig = plt.figure()
     #ax = fig.gca(projection='3d')   # This way is deprecated after matplotlib 3.4
@@ -227,8 +234,11 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
     ax.voxels(np.ones_like(tif), facecolors=cmap(norm(tif)))
     plt.savefig(pth + '_prediction_voxels.png')
     #plt.show()
+    end_3 = time.time()
+    print('Time for voxel computations and plotting (s): ',end_3 - start_3)
     
     # shravan - save 5 slices along each direction
+    start_4 = time.time()
     slcs = 5
     fig, axs = plt.subplots(slcs, 3)    # plots the graphs in 5 rows by 3 columns format if slcs=5. ax returns an array of axes
     if imtype == 'colour':
@@ -248,12 +258,6 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
             axs[j, 2].imshow(gb[:, :, j], cmap = colormap_display)
     plt.savefig(pth + '_prediction_slices.png')
     plt.close()
-
+    end_4 = time.time()
+    print('Time for plotting slices (s): ',end_4 - start_4)
     return tif, raw, netG
-
-
-
-
-
-
-
