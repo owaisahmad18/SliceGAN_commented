@@ -1,0 +1,52 @@
+Install pyTorch with cuda using Conda
+
+Important websites:
+https://developer.nvidia.com/cuda-gpus
+https://tech.amikelive.com/node-930/cuda-compatibility-of-nvidia-display-gpu-drivers/
+https://www.google.com/search?q=install+pytorch+with+cuda&oq=install+pytorch+with+cuda&aqs=chrome..69i57j0i512l4j69i60l3.7312j0j4&sourceid=chrome&ie=UTF-8#fpstate=ive&vld=cid:2172f4ef,vid:GMSjDTU8Zlc
+https://pytorch.org/get-started/locally/
+
+
+Install correct drivers for the navidia GPU available.
+Website for quadro drivers: https://www.techspot.com/downloads/drivers/essentials/nvidia-quadro/
+GPU: Nvidia Quadro M2000
+driver file name: 512.15-quadro-rtx-desktop-notebook-win10-win11-64bit-international-dch-whql
+driver version: 30.0.15.1215
+
+Open cmd as administrator
+
+conda create --prefix=F:\pytorch_cuda\env_pyTorch
+
+conda activate F:\pytorch_cuda\env_pyTorch
+
+conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
+
+conda list cudatoolkit	<--- should display the version if it is installed
+
+conda list cudnn	<--- should display the version if it is installed
+
+conda install -c anaconda cudatoolkit
+
+conda install -c anaconda cudnn
+
+where cudnn*
+
+nvidia-smi <---- should display GPU information and its usage
+nvidia-smi --list-gpus <---- lists the gpus
+
+
+Open python from cmd line and type the following:
+import torch
+print(torch.__version__) --> 2.0.0
+print(torch.version.cuda)	--> 11.7
+print(torch.backends.cudnn.enabled)	--> True
+torch.cuda.is_available()	--> should return True
+torch.zeros(1).cuda() --> tensor([0.], device='cuda:0') <-- create a cuda tensor of size 1 with 0 ((The easiest way to check if PyTorch supports your compute capability is to install the desired version of PyTorch with CUDA support (as is done above) and run this from a python interpreter))
+torch.cuda.current_device() --> 0 (gets the index of the currently selected device - If there is a device and it is the first one, it should produce the "0")
+torch.cuda.device_count() --> 1 (get the number of GPUs available)
+torch.cuda.get_device_name(0) --> 'Quadro M2000' <--- Get the name of the device
+torch.cuda.device(0) --> <torch.cuda.device object at 0x0000020291B64B20>
+
+
+other cuda examples:
+https://deeplearninguniversity.com/pytorch/pytorch-cuda/
