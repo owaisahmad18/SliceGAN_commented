@@ -4,9 +4,11 @@ import torch
 from torch import autograd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import tifffile
 import sys
 import time
+import porespy as ps    # Calculates the two-point correlation function using Fourier transforms. see https://porespy.org/examples/metrics/reference/two_point_correlation.html
 ## Training Utils
 
 def mkdr(proj,proj_dir,Training):
@@ -180,7 +182,7 @@ def graph_plot(data,labels,pth,name,xlabel,ylabel):
     plt.close()
 
 
-def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
+def test_img(pth, imtype, ref_img_path, size_voxel, netG, nz = 64, lf = 4, periodic=False):
     """
     saves a test volume for a trained or in progress of training generator
     :param pth: where to save image and also where to find the generator
@@ -228,6 +230,64 @@ def test_img(pth, imtype, netG, nz = 64, lf = 4, periodic=False):
             np.savetxt(outfile, data_slice, fmt='%3d', delimiter=' ')
             outfile.write('# New slice\n')  # Writing out a break to indicate different slices...
     
+    # write the data in voxel format for simmetrix (the ZYX format is used to be compatible with the image we see in tiff plotting)
+    with open(pth + '-voxelExplicit.txt', 'w') as outfile:
+        outfile.write('# Array shape: {0}\n'.format(tif.shape))
+        iSlice_X = 0    # The voxel data is stored in tif array as [sliceX_0,sliceX_1,......sliceX_192], where sliceX_0=[sliceY_0,sliceY_1,....sliceY_192] where sliceY_0=[sliceZ_0,sliceZ_1,.....sliceZ_192]
+        for data_slice in tif:              # In other words:[[[voxel(0,0,0),voxel(0,0,1),voxel(0,0,2),.......,voxel(0,0,192)], [voxel(0,1,0),voxel(0,1,1),.....,voxel(0,1,192)], [], ........[]],   [], .........   []]
+            iSlice_Y = 0                    # i.e. the order of movement in the 3D cube is: start at (0,0,0) corner and move along Z (192 voxels), then move along Y(one voxel at a time and for a total of 192 voxels along Y), then move along X by 1 voxel and repeat.
+            for data_slice_sub in data_slice:
+                iSlice_Z = 0
+                for data in data_slice_sub:
+                    data_to_write = str(iSlice_X) + '   ' + str(iSlice_Y) + '   ' + str(iSlice_Z) + '   ' + str(data) + '\n'
+                    outfile.write(data_to_write)
+                    iSlice_Z = iSlice_Z + 1
+                iSlice_Y = iSlice_Y + 1
+            iSlice_X = iSlice_X + 1
+            
+    # compute the 1-point and 2-point correlation function for the generated image and the reference image and plot them
+    dataSynthetic = np.load(pth + '-imageOutput.npy')
+    fig, ax = plt.subplots(1, 1, figsize=[6, 6])
+    dataCorrSynthetic = ps.metrics.two_point_correlation((1/255)*dataSynthetic, voxel_size=size_voxel, bins=100)
+    ax.plot(dataCorrSynthetic.distance, dataCorrSynthetic.probability, 'r-', label='Synthetic Image - 3D')
+    totalVoxels = dataSynthetic.shape[0]*dataSynthetic.shape[1]*dataSynthetic.shape[2]
+    dataSynthetic_array = dataSynthetic.reshape(totalVoxels)
+    nVoxels_phase_0 = np.count_nonzero(dataSynthetic_array==0)
+    nVoxels_phase_255 = np.count_nonzero(dataSynthetic_array==255)
+    fraction_voxels_phase_0 = nVoxels_phase_0/totalVoxels
+    fraction_voxels_phase_255 = nVoxels_phase_255/totalVoxels
+    
+    # Process the reference image
+    dataReferenceImg = mpimg.imread(ref_img_path)
+    if dataReferenceImg.shape[2] >= 3:  # convert the RGB or RGBA channeled image to black and white image (this may not give correct results if we have more than two phases in the image)
+        dataReferenceImg_blackWhite = (1/3)*dataReferenceImg[:,:,0] + (1/3)*dataReferenceImg[:,:,1] + (1/3)*dataReferenceImg[:,:,2]
+    dataCorrReal = ps.metrics.two_point_correlation(dataReferenceImg_blackWhite, voxel_size=size_voxel, bins=100)
+    ax.plot(dataCorrReal.distance, dataCorrReal.probability, 'r.', label='Reference Image - 2D')
+    totalPixels = dataReferenceImg_blackWhite.shape[0]*dataReferenceImg_blackWhite.shape[1]
+    dataReferenceImg_blackWhite_array = dataReferenceImg_blackWhite.reshape(totalPixels)
+    nPixels_phase_0 = np.count_nonzero(dataReferenceImg_blackWhite_array==0)
+    nPixels_phase_255 = np.count_nonzero(dataReferenceImg_blackWhite_array==1)
+    fraction_pixels_phase_0 = nPixels_phase_0/totalPixels
+    fraction_pixels_phase_255 = nPixels_phase_255/totalPixels
+   
+    ax.set_xlim(0, 1.1*np.amin([dataCorrReal.distance[len(dataCorrReal.distance)-1],dataCorrSynthetic.distance[len(dataCorrSynthetic.distance)-1]]))
+    ax.set_xlabel("Distance (r)")
+    ax.set_ylabel("$S_2(r)$");
+    ax.legend()
+    plt.savefig(pth + '-2ptCorrFunction.png')
+    #plt.show()
+    # write the 1-point and 2-point statistics to a summary file
+    with open(pth + '-SummaryStats.dat', 'w') as outfile:
+        outfile.write('---------- Summary of stats for reference image\n')  # If there are multiple images, we need to change these
+        outfile.write('Image size (Y-dir,X-dir): ' + str(dataReferenceImg_blackWhite.shape[0]) + '  ' + str(dataReferenceImg_blackWhite.shape[1]) + '\n')
+        outfile.write('Pixel size : ' + str(size_voxel) + '\n')
+        outfile.write('Phase 0:   ' + 'number of pixels: ' + str(nPixels_phase_0) + ' volume fraction: ' + str(fraction_pixels_phase_0) + '\n')
+        outfile.write('Phase 255: ' + 'number of pixels: ' + str(nPixels_phase_255) + ' volume fraction: ' + str(fraction_pixels_phase_255) + '\n')
+        outfile.write('---------- Summary of stats for synthetic image\n')
+        outfile.write('Image size (X-dir,Y-dir,Z-dir): ' + str(dataSynthetic.shape[0]) + '  ' + str(dataSynthetic.shape[1]) + '  ' + str(dataSynthetic.shape[2]) + '\n')
+        outfile.write('Phase 0:   ' + 'number of voxels: ' + str(nVoxels_phase_0) + ' volume fraction: ' + str(fraction_voxels_phase_0) + '\n')
+        outfile.write('Phase 255:   ' + 'number of voxels: ' + str(nVoxels_phase_255) + ' volume fraction: ' + str(fraction_voxels_phase_255) + '\n')
+    #
     start_2 = time.time()
     tifffile.imwrite(pth + '_prediction.tif', tif)  # blank images are displayed. could be because of the edgecolor being black
     end_2 = time.time()
