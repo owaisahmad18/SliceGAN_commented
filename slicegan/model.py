@@ -5,8 +5,10 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import time
 import matplotlib
+import os
+import shutil
 
-def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBeforeUpdatingGenerator,nSamplesFromRealImages,ngpu,num_epochs,batch_size,D_batch_size,lrg,lrd,beta1,beta2,Lambda,lz,workers):
+def train(pth, filepath_log, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBeforeUpdatingGenerator,nSamplesFromRealImages,ngpu,num_epochs,batch_size,D_batch_size,lrg,lrd,beta1,beta2,Lambda,lz,workers):
     """
     train the generator
     :param pth: path to save all files, imgs and data
@@ -69,6 +71,11 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
     print("Starting Training Loop...")
     # For each epoch
     start = time.time()
+    filepath_gen_prev = ''
+    filepath_disc_prev = ''
+    if os.path.exists(filepath_log):
+        os.remove(filepath_log)                
+        
     for epoch in range(num_epochs): # shravan --------------------------------------------- loop over number of epochs
         # sample data for each direction (shravan ---------------------------------------------- loop over batches of data)
         for i, (datax, datay, dataz) in enumerate(zip(dataloaderx, dataloadery, dataloaderz), 1):   # (1,(datax,datay,dataz)), (2,(datax,datay,dataz)), ..... datax,datay,dataz are tensor objects. 2nd argument in enumerate() is the starting index for the enumerate objects. i.e. instead of starting with 0, it starts with 1 here. 1,2,3... etc. are the batch numbers.
@@ -144,14 +151,22 @@ def train(pth, imtype, datatype, real_data, Disc, Gen, nc, l, nz, sf,nBatchesBef
             if i % 1 == 0:  # shravan - print the state of networks and images after every batch of training.
                 netG.eval()
                 with torch.no_grad():
-                    torch.save(netG.state_dict(), pth + '_Gen.pt')
-                    torch.save(netD.state_dict(), pth + '_Disc.pt')
+                    torch.save(netG.state_dict(), pth + '_Gen_currentEpoch.pt')
+                    torch.save(netD.state_dict(), pth + '_Disc_currentEpoch.pt')
+                    if os.path.exists(filepath_gen_prev):
+                        os.remove(filepath_gen_prev)
+                    if os.path.exists(filepath_disc_prev):
+                        os.remove(filepath_disc_prev)
+                    filepath_gen_prev = pth + '_Gen_epoch_' + str(epoch+1) + '.pt'
+                    filepath_disc_prev = pth + '_Disc_epoch_' + str(epoch+1) + '.pt'                        
+                    shutil.copy2(pth + '_Gen_currentEpoch.pt', filepath_gen_prev)
+                    shutil.copy2(pth + '_Disc_currentEpoch.pt', filepath_disc_prev)
                     noise = torch.randn(1, nz,lz,lz,lz, device=device)
                     img = netG(noise)   # based on the optimized Generator so far, generate a new image. img has a size of 1XnPhasesXimg_size(l)Ximg_size(l)Ximg_size(l)
                     ###Print progress
                     ## calc ETA
                     steps = len(dataloaderx)    # total number of batches
-                    util.calc_eta(steps, time.time(), start, i, epoch, num_epochs,isTrainedGeneratorThisBatch)  # i is the batch number, steps is the total number of batches, In each epoch, all batches are passed to neural network for training.
+                    util.calc_eta(filepath_log, steps, time.time(), start, i, epoch, num_epochs,isTrainedGeneratorThisBatch)  # i is the batch number, steps is the total number of batches, In each epoch, all batches are passed to neural network for training.
                     ###save example slices
                     # img is a 3D volume consisting of batch_size number of images in their on-hot-encoded representation.
                     util.test_plotter(img, 5, imtype, pth)  # <--- plots the final slices. imtype can be one of colour, grayscale, three-phase or two-phase or nphases.
