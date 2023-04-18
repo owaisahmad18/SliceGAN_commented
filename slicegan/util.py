@@ -86,7 +86,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device, gp_
     return gradient_penalty
 
 
-def calc_eta(steps, time, start, i, epoch, num_epochs,isTrainedGeneratorThisBatch):
+def calc_eta(filepath_log, steps, time, start, i, epoch, num_epochs,isTrainedGeneratorThisBatch):
     """
     Estimates the time remaining based on the elapsed time and epochs
     :param steps:
@@ -105,6 +105,9 @@ def calc_eta(steps, time, start, i, epoch, num_epochs,isTrainedGeneratorThisBatc
     print('Epochs: %d/%d \t batchNumber: %d/%d \t Est. Time Remaining: %d hrs %d mins \t isTrainedGeneratorThisBatch: '
           % (epoch+1, num_epochs, i, steps,
              hrs, mins),isTrainedGeneratorThisBatch)
+    filepath_log_handle = open(filepath_log,"a")
+    filepath_log_handle.write('Epochs: ' + str(epoch+1) + '/' + str(num_epochs) + ' batchNumber: ' + str(i) + '/' + str(steps) + '  Est. Time Remaining: ' + str(hrs) + ' hrs ' + str(mins) + ' mins' + '   isTrainedGeneratorThisBatch: ' + str(isTrainedGeneratorThisBatch) + '\n')
+    
 
 ## Plotting Utils
 def post_proc(img,imtype):
@@ -182,7 +185,7 @@ def graph_plot(data,labels,pth,name,xlabel,ylabel):
     plt.close()
 
 
-def test_img(pth, imtype, ref_img_path, size_voxel, netG, nz = 64, lf = 4, periodic=False):
+def test_img(pth, filename_gen_params, imtype, ref_img_path, size_voxel, netG, nz = 64, lf = 4, periodic=False):
     """
     saves a test volume for a trained or in progress of training generator
     :param pth: where to save image and also where to find the generator
@@ -195,7 +198,7 @@ def test_img(pth, imtype, ref_img_path, size_voxel, netG, nz = 64, lf = 4, perio
     :return:
     """
     colormap_display = "viridis"    # colormap for the prediction microstructure. "viridis", "greys", "gray", "binary", "jet", "hsv" etc. similarly, "viridis_r" for reversing the color schemes. see https://matplotlib.org/stable/gallery/color/colormap_reference.html
-    netG.load_state_dict(torch.load(pth + '_Gen.pt'))
+    netG.load_state_dict(torch.load(filename_gen_params))
     netG.eval()
     #netG.cuda()
     #noise = torch.randn(1, nz, lf, lf, lf).cuda()
@@ -270,7 +273,7 @@ def test_img(pth, imtype, ref_img_path, size_voxel, netG, nz = 64, lf = 4, perio
     fraction_pixels_phase_0 = nPixels_phase_0/totalPixels
     fraction_pixels_phase_255 = nPixels_phase_255/totalPixels
    
-    ax.set_xlim(0, 1.1*np.amin([dataCorrReal.distance[len(dataCorrReal.distance)-1],dataCorrSynthetic.distance[len(dataCorrSynthetic.distance)-1]]))
+    ax.set_xlim(0, 1.02*np.amin([dataCorrReal.distance[len(dataCorrReal.distance)-1],dataCorrSynthetic.distance[len(dataCorrSynthetic.distance)-1]]))
     ax.set_xlabel("Distance (r)")
     ax.set_ylabel("$S_2(r)$");
     ax.legend()
@@ -287,6 +290,15 @@ def test_img(pth, imtype, ref_img_path, size_voxel, netG, nz = 64, lf = 4, perio
         outfile.write('Image size (X-dir,Y-dir,Z-dir): ' + str(dataSynthetic.shape[0]) + '  ' + str(dataSynthetic.shape[1]) + '  ' + str(dataSynthetic.shape[2]) + '\n')
         outfile.write('Phase 0:   ' + 'number of voxels: ' + str(nVoxels_phase_0) + ' volume fraction: ' + str(fraction_voxels_phase_0) + '\n')
         outfile.write('Phase 255:   ' + 'number of voxels: ' + str(nVoxels_phase_255) + ' volume fraction: ' + str(fraction_voxels_phase_255) + '\n')
+    with open(pth + '-2ptCorr-refImage.dat', 'w') as outfile: 
+        outfile.write('# distance,  S2(r) ' + '\n')
+        for ii in range(0,len(dataCorrReal.distance)-1):
+            outfile.write(str(dataCorrReal.distance[ii]) + '        ' + str(dataCorrReal.probability[ii]) + '\n')
+    with open(pth + '-2ptCorr-syntheticImage.dat', 'w') as outfile: 
+        outfile.write('# distance,  S2(r) ' + '\n')
+        for ii in range(0,len(dataCorrSynthetic.distance)-1):
+            outfile.write(str(dataCorrSynthetic.distance[ii]) + '        ' + str(dataCorrSynthetic.probability[ii]) + '\n')            
+            
     #
     start_2 = time.time()
     tifffile.imwrite(pth + '_prediction.tif', tif)  # blank images are displayed. could be because of the edgecolor being black
