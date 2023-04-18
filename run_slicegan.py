@@ -17,13 +17,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument('training', type=int)
 args = parser.parse_args()
 Training = args.training
-size_pixel_real_img = 1
+
+size_pixel_real_img = 1.88679245283 # 53pixels = 100microns for the WC-720-51-final-cropped microstructure
 if Training ==0:
     print("NOTE: The size of the pixel in the reference image is set to:", size_pixel_real_img)
 # Training = 0
 
 Project_path = util.mkdr(Project_name, Project_dir, Training)
-
+filename_prediction_gen_params = Project_path + '_Gen_epoch_53.pt'
+filepath_log = Project_path + '.log'
 ## Data Processing
 # Define image  type (colour, grayscale, three-phase or two-phase.
 # n-phase materials must be segmented)
@@ -59,13 +61,13 @@ df, gf = [img_channels, 64, 128, 256, 512, 1], [    # These also determine the s
 dp, gp = [1, 1, 1, 1, 0], [2, 2, 2, 2, 3]   # padding for 5 layers of discriminator and generators (Table 1 in the paper)
 
 # other settings
-nBatchesBeforeUpdatingGenerator = 8
-nSamplesFromRealImages = 32*16  # multiple of 32
+nBatchesBeforeUpdatingGenerator = 5
+nSamplesFromRealImages = 32*600  # multiple of 32
 ngpu = 1
 num_epochs = 50000
 # batch sizes
-batch_size = 4  # shravan - how many samples per batch to load
-D_batch_size = 4
+batch_size = 8  # shravan - how many samples per batch to load
+D_batch_size = 8
 # optimiser params for G and D
 learningRateGenerator = 0.0001    # <-- for generator
 learningRateDiscriminator = 0.0001    # <-- for discriminator
@@ -82,8 +84,8 @@ print('netD: ', netD())
 print('netG: ', netG())
 # Train
 if Training:
-    model.train(Project_path, image_type, data_type, data_path, netD, netG, img_channels, img_size, z_channels, scale_factor,nBatchesBeforeUpdatingGenerator,nSamplesFromRealImages,ngpu,num_epochs,batch_size,D_batch_size,learningRateGenerator,learningRateDiscriminator,beta1,beta2,Lambda,latentSpaceSize,nWorkers)
+    model.train(Project_path, filepath_log, image_type, data_type, data_path, netD, netG, img_channels, img_size, z_channels, scale_factor,nBatchesBeforeUpdatingGenerator,nSamplesFromRealImages,ngpu,num_epochs,batch_size,D_batch_size,learningRateGenerator,learningRateDiscriminator,beta1,beta2,Lambda,latentSpaceSize,nWorkers)
 else:
-    img, raw, netG = util.test_img(Project_path, image_type, data_path[0], size_pixel_real_img, netG(), z_channels, lf=8, periodic=generatePeriodicPrediction)
+    img, raw, netG = util.test_img(Project_path, filename_prediction_gen_params, image_type, data_path[0], size_pixel_real_img, netG(), z_channels, lf=8, periodic=generatePeriodicPrediction)
     
 print('The program successfully finished')
