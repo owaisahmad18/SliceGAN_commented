@@ -7,11 +7,11 @@ to generate a synthetic image using a trained generator.
 
 from slicegan import model, networks, util
 import argparse
+# Specify project folder.
+Project_dir = 'Trained_Generators/WC-720-51-final-cropped/epoch_3_smallerMS'
 # Define project name
 #Project_name = 'COMPOSITE2D'
 Project_name = 'WC-720-51-final-cropped'
-# Specify project folder.
-Project_dir = 'Trained_Generators'
 # Run with False to show an image during or after training
 parser = argparse.ArgumentParser()
 parser.add_argument('training', type=int)
@@ -24,7 +24,7 @@ if Training ==0:
 # Training = 0
 
 Project_path = util.mkdr(Project_name, Project_dir, Training)
-filename_prediction_gen_params = Project_path + '_Gen_epoch_53.pt'
+filename_prediction_gen_params = Project_path + '_Gen_epoch_3.pt'
 filepath_log = Project_path + '.log'
 ## Data Processing
 # Define image  type (colour, grayscale, three-phase or two-phase.
@@ -86,6 +86,6 @@ print('netG: ', netG())
 if Training:
     model.train(Project_path, filepath_log, image_type, data_type, data_path, netD, netG, img_channels, img_size, z_channels, scale_factor,nBatchesBeforeUpdatingGenerator,nSamplesFromRealImages,ngpu,num_epochs,batch_size,D_batch_size,learningRateGenerator,learningRateDiscriminator,beta1,beta2,Lambda,latentSpaceSize,nWorkers)
 else:
-    img, raw, netG = util.test_img(Project_path, filename_prediction_gen_params, image_type, data_path[0], size_pixel_real_img, netG(), z_channels, lf=8, periodic=generatePeriodicPrediction)
+    img, raw, netG = util.test_img(Project_path, filename_prediction_gen_params, image_type, data_path[0], size_pixel_real_img, netG(), z_channels, lf=4, periodic=generatePeriodicPrediction)
     
 print('The program successfully finished')
