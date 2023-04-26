@@ -19,7 +19,7 @@ def mkdr(proj,proj_dir,Training):
     :param Training: whether new training run or testing image
     :return: full project path
     """    
-    pth = proj_dir + '/' + proj
+    pth = proj_dir 
     if Training:
         try:
             os.mkdir(proj_dir)
@@ -320,6 +320,22 @@ def test_img(pth, filename_gen_params, imtype, ref_img_path, size_voxel, netG, n
     # shravan - save 5 slices along each direction
     start_4 = time.time()
     slcs = 5
+    sliceNumbersX = [0]
+    sliceNumbersY = [0]
+    sliceNumbersZ = [0]
+    sliceNumbersX_ = [round(j*gb.shape[0]/(slcs-1))-1 for j in range(1, slcs-1)]
+    sliceNumbersY_ = [round(j*gb.shape[1]/(slcs-1))-1 for j in range(1, slcs-1)]
+    sliceNumbersZ_ = [round(j*gb.shape[2]/(slcs-1))-1 for j in range(1, slcs-1)]
+    for ii in range(0,len(sliceNumbersX_)):
+        sliceNumbersX.append(sliceNumbersX_[ii])
+    sliceNumbersX.append(gb.shape[0]-1)
+    for ii in range(0,len(sliceNumbersY_)):
+        sliceNumbersY.append(sliceNumbersY_[ii])
+    sliceNumbersY.append(gb.shape[1]-1)
+    for ii in range(0,len(sliceNumbersZ_)):
+        sliceNumbersZ.append(sliceNumbersZ_[ii])        
+    sliceNumbersZ.append(gb.shape[2]-1)
+    
     fig, axs = plt.subplots(slcs, 3)    # plots the graphs in 5 rows by 3 columns format if slcs=5. ax returns an array of axes
     if imtype == 'colour':
         for j in range(slcs):
@@ -333,9 +349,9 @@ def test_img(pth, filename_gen_params, imtype, ref_img_path, size_voxel, netG, n
             axs[j, 2].imshow(gb[:, :, j], cmap = 'gray')
     else:
         for j in range(slcs):
-            axs[j, 0].imshow(gb[j, :, :], cmap = colormap_display)  # shravan - by default, the 'viridis' color map is used
-            axs[j, 1].imshow(gb[:, j, :], cmap = colormap_display)
-            axs[j, 2].imshow(gb[:, :, j], cmap = colormap_display)
+            axs[j, 0].imshow(gb[sliceNumbersX[j], :, :], cmap = colormap_display)  # shravan - by default, the 'viridis' color map is used
+            axs[j, 1].imshow(gb[:, sliceNumbersY[j], :], cmap = colormap_display)
+            axs[j, 2].imshow(gb[:, :, sliceNumbersZ[j]], cmap = colormap_display)
     plt.savefig(pth + '_prediction_slices.png')
     plt.close()
     end_4 = time.time()
